@@ -42,6 +42,12 @@ The dashboard includes:
 No installation required. Runs in any modern browser.
 
 ---
+## Jupiter Notebook in CoLab
+
+Run the simulations in CoLab and see the performance of each algorithm against each other:
+
+**[Launch Jupiter Notebook in CoLab](https://colab.research.google.com/github/Gnacode/IEEE-TSNFA/blob/main/notebooks/TSNFA_Step_by_Step.ipynb)**
+
 
 ## Repository Structure
 
