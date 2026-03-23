@@ -2,8 +2,9 @@
 
 [![Paper](https://img.shields.io/badge/Paper-IEEE_IoT-blue)](https://doi.org/XXXX)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Interactive Results](https://img.shields.io/badge/Results-Interactive_Dashboard-orange)](https://gnacode.github.io/tsnfa-iot-simulation/)
+[![Interactive Results](https://img.shields.io/badge/Results-Interactive_Dashboard-orange)](https://gnacode.github.io/IEEE-TSNFA/)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Gnacode/IEEE-TSNFA/blob/main/notebooks/TSNFA_Step_by_Step.ipynb)
 
 Monte Carlo simulation framework comparing **Temporal Spectral Noise-Floor Adaptation (TSNFA)** against five established event detection algorithms for autonomous edge triggering in IoT mesh sensor networks.
 
@@ -30,7 +31,7 @@ Monte Carlo simulation framework comparing **Temporal Spectral Noise-Floor Adapt
 
 Explore the simulation results interactively:
 
-**[Launch Interactive Dashboard](https://gnacode.github.io/tsnfa-iot-simulation/)**
+**[Launch Interactive Dashboard](https://gnacode.github.io/IEEE-TSNFA/)**
 
 The dashboard includes:
 - Per-method performance comparison with interactive bar charts
@@ -65,6 +66,8 @@ tsnfa-iot-simulation/
 │       └── fig6_radar.pdf
 ├── docs/
 │   └── index.html                    # Interactive GitHub Pages dashboard
+├── notebooks/
+│   └── TSNFA_Step_by_Step.ipynb    # Interactive walkthrough (runs in Colab)
 └── paper/
     ├── Section_III_Theoretical_Framework.md
     └── algorithms/                   # Formatted pseudocode (docx)
@@ -81,7 +84,7 @@ tsnfa-iot-simulation/
 ### Installation
 
 ```bash
-git clone https://github.com/gnacode/tsnfa-iot-simulation.git
+git clone https://github.com/Gnacode/IEEE-TSNFA.git
 cd tsnfa-iot-simulation
 pip install -r simulation/requirements.txt
 ```
