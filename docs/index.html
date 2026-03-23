@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSNFA Simulation Results — Interactive Dashboard</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+  :root { --bg: #fafafa; --card: #fff; --text: #1a1a1a; --muted: #666; --border: #e0e0e0; --accent: #1565c0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1a1a1a; --card: #2a2a2a; --text: #e0e0e0; --muted: #999; --border: #444; --accent: #64b5f6; }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+  .header { background: linear-gradient(135deg, #0d47a1, #1565c0); color: white; padding: 2rem; text-align: center; }
+  .header h1 { font-size: 1.8rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .header p { opacity: 0.9; font-size: 0.95rem; max-width: 700px; margin: 0 auto; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+  .grid.full { grid-template-columns: 1fr; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+  .card h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--accent); }
+  .card .subtitle { font-size: 0.85rem; color: var(--muted); margin-bottom: 1rem; }
+  .summary-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
+  .metric-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; text-align: center; }
+  .metric-card.highlight { border-color: #2e7d32; border-width: 2px; background: #e8f5e9; }
+  @media (prefers-color-scheme: dark) { .metric-card.highlight { background: #1b3a1b; } }
+  .metric-card .name { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .metric-card .value { font-size: 1.4rem; font-weight: 700; margin: 0.25rem 0; }
+  .metric-card .detail { font-size: 0.75rem; color: var(--muted); }
+  .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .tab { padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--card); cursor: pointer; font-size: 0.85rem; transition: all 0.2s; }
+  .tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .tab:hover:not(.active) { border-color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td { padding: 0.6rem 0.8rem; text-align: right; border-bottom: 1px solid var(--border); }
+  th { font-weight: 600; text-align: right; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; }
+  th:first-child, td:first-child { text-align: left; }
+  tr.best td { font-weight: 600; }
+  .method-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .controls { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+  .controls label { font-size: 0.85rem; color: var(--muted); }
+  .controls select { padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 0.85rem; }
+  .footer { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.8rem; border-top: 1px solid var(--border); margin-top: 2rem; }
+  .footer a { color: var(--accent); text-decoration: none; }
+  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } .summary-grid { grid-template-columns: repeat(3, 1fr); } }
+  .defence-table td.yes { color: #2e7d32; font-weight: 600; }
+  .defence-table td.no { color: #c62828; }
+  .defence-table td.partial { color: #e65100; }
+  .noise-viz { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+  .noise-viz label { font-size: 0.85rem; min-width: 100px; }
+  .noise-viz input[type=range] { flex: 1; min-width: 150px; }
+  .noise-viz .val { font-size: 0.85rem; font-weight: 600; min-width: 60px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>TSNFA: Temporal Spectral Noise-Floor Adaptation</h1>
+  <p>Interactive exploration of 200-node Monte Carlo simulation results comparing six event detection algorithms for IoT mesh sensor networks</p>
+  <p style="margin-top:0.5rem; font-size:0.8rem; opacity:0.7;">Makovetskii &amp; Thomsen, IEEE Internet of Things Journal, 2026</p>
+</div>
+
+<div class="container">
+
+<!-- Summary cards -->
+<div class="summary-grid" id="summary-cards"></div>
+
+<!-- Main comparison charts -->
+<div class="grid">
+  <div class="card">
+    <h2>Detection performance</h2>
+    <p class="subtitle">Detection rate and false positive count per method</p>
+    <div id="chart-dr-fp" style="height:350px;"></div>
+  </div>
+  <div class="card">
+    <h2>Radar comparison</h2>
+    <p class="subtitle">All six metrics normalised (higher = better on all axes)</p>
+    <div class="controls">
+      <label>Show methods:</label>
+      <select id="radar-select" multiple size="1" onchange="updateRadar()">
+        <option value="all" selected>All methods</option>
+      </select>
+    </div>
+    <div id="chart-radar" style="height:350px;"></div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>False alarm rate vs precision</h2>
+    <p class="subtitle">Bubble size = total false positives (log scale)</p>
+    <div id="chart-far-prec" style="height:350px;"></div>
+  </div>
+  <div class="card">
+    <h2>Network impact</h2>
+    <p class="subtitle">Network load generated by each method (kB/hr)</p>
+    <div id="chart-network" style="height:350px;"></div>
+  </div>
+</div>
+
+<!-- Defence composition -->
+<div class="grid full">
+  <div class="card">
+    <h2>Defence composition analysis</h2>
+    <p class="subtitle">Each missing defence maps to a specific failure mode in the simulation results</p>
+    <table class="defence-table">
+      <thead>
+        <tr><th style="text-align:left">Method</th><th>Band selection</th><th>Adaptive noise floor</th><th>Persistence filter</th><th>DR</th><th>FP</th><th>Failure mode</th></tr>
+      </thead>
+      <tbody id="defence-table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Noise model explorer -->
+<div class="grid full">
+  <div class="card">
+    <h2>Noise model explorer</h2>
+    <p class="subtitle">Adjust the simulation noise parameters and see how they affect the signal composition</p>
+    <div class="noise-viz">
+      <label>Noise power drift:</label>
+      <input type="range" id="noise-drift" min="0" max="12" value="6" step="0.5" oninput="updateNoise()">
+      <span class="val" id="noise-drift-val">±6 dB</span>
+    </div>
+    <div class="noise-viz" style="margin-top:0.5rem">
+      <label>EMI amplitude:</label>
+      <input type="range" id="emi-amp" min="0" max="1.0" value="0.3" step="0.05" oninput="updateNoise()">
+      <span class="val" id="emi-amp-val">0.3√P</span>
+    </div>
+    <div class="noise-viz" style="margin-top:0.5rem">
+      <label>Digital burst:</label>
+      <input type="range" id="dig-amp" min="0" max="4.0" value="2.0" step="0.1" oninput="updateNoise()">
+      <span class="val" id="dig-amp-val">2.0√P</span>
+    </div>
+    <div id="chart-noise" style="height:300px; margin-top:1rem;"></div>
+  </div>
+</div>
+
+<!-- Full results table -->
+<div class="grid full">
+  <div class="card">
+    <h2>Complete results table</h2>
+    <p class="subtitle">200-node network, 24-hour simulation, ACCURATE preset</p>
+    <table>
+      <thead>
+        <tr><th style="text-align:left">Method</th><th>DR %</th><th>FP</th><th>FN</th><th>Prec %</th><th>FAR /hr/node</th><th>Latency ms</th><th>99th ms</th><th>Net kB/hr</th></tr>
+      </thead>
+      <tbody id="results-table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+  <p><strong>GNACODE INC.</strong> — Medicine Hat, Alberta, Canada</p>
+  <p style="margin-top:0.5rem;">
+    <a href="https://github.com/gnacode/tsnfa-iot-simulation">GitHub Repository</a> · 
+    <a href="https://gnacode.com">gnacode.com</a> · 
+    MIT License
+  </p>
+</div>
+
+<script>
+// ============================================================
+// Simulation data
+// ============================================================
+const DATA = {
+  methods: ['Proposed', 'Zhang', 'STFT', 'DEDaR', 'SDT', 'TinyML'],
+  labels: ['TSNFA\n(Proposed)', 'Zhang\net al. 2023', 'STFT\n(Bhoi 2022)', 'DEDaR\n(Hussein 2022)', 'SDT\n(Correa 2019)', 'TinyML\n(Hammad 2023)'],
+  colors: ['#2e7d32', '#d32f2f', '#1565c0', '#e65100', '#6a1b9a', '#00838f'],
+  dr:   [100.0, 73.4, 100.0, 100.0, 0.0, 99.7],
+  fp:   [0, 919842, 399822, 13387930, 0, 5465607],
+  fn:   [0, 1274, 0, 0, 4789, 14],
+  prec: [100.0, 1.5, 4.6, 0.3, 0.0, 0.5],
+  far:  [0.0, 192.6, 83.7, 2803.2, 0.0, 1144.4],
+  lat:  [23.5, 33.3, 29.4, 27.5, 0.0, 30.4],
+  lat99:[43.9, 62.8, 55.2, 52.1, 0.0, 56.6],
+  net:  [8.6, 1205.4, 270.7, 6499.3, 0.0, 1773.5],
+  defences: [
+    { band: 'YES', adaptive: 'YES', persist: 'YES', failure: 'None — all three defences active' },
+    { band: 'NO', adaptive: 'YES*', persist: 'NO', failure: 'Composite noise inflates threshold; no spectral discrimination' },
+    { band: 'YES', adaptive: 'NO', persist: 'NO', failure: 'Frozen threshold cannot follow ±6 dB noise drift' },
+    { band: 'NO', adaptive: 'PARTIAL', persist: 'NO', failure: 'Broadband energy ratio triggers on any transient at any frequency' },
+    { band: 'NO', adaptive: 'NO', persist: 'NO', failure: 'Reference random-walks with noise; no viable Δ exists' },
+    { band: 'PARTIAL', adaptive: 'NO', persist: 'NO', failure: 'Frozen autoencoder threshold; same failure as STFT' },
+  ]
+};
+
+const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+const plotBg = dark ? '#2a2a2a' : '#fff';
+const plotText = dark ? '#e0e0e0' : '#1a1a1a';
+const plotGrid = dark ? '#444' : '#e0e0e0';
+const plotLayout = { paper_bgcolor: plotBg, plot_bgcolor: plotBg, font: { color: plotText, family: '-apple-system, sans-serif', size: 12 }, margin: { t: 30, b: 60, l: 60, r: 20 } };
+
+// ============================================================
+// Summary cards
+// ============================================================
+function renderSummary() {
+  const cards = [
+    { name: 'Detection Rate', value: '100.0%', detail: '0 missed events', highlight: true },
+    { name: 'False Positives', value: '0', detail: 'Zero false alarms', highlight: true },
+    { name: 'Precision', value: '100.0%', detail: 'Every trigger is real', highlight: true },
+    { name: 'Latency', value: '23.5 ms', detail: 'Fastest of all methods', highlight: true },
+    { name: 'Network Load', value: '8.6 kB/hr', detail: '760× less than DEDaR', highlight: true },
+    { name: 'Compute', value: '~100 ops', detail: 'Runs on Cortex-M0+', highlight: true },
+  ];
+  const el = document.getElementById('summary-cards');
+  el.innerHTML = cards.map(c => `
+    <div class="metric-card ${c.highlight ? 'highlight' : ''}">
+      <div class="name">${c.name}</div>
+      <div class="value">${c.value}</div>
+      <div class="detail">${c.detail}</div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// Detection Rate + FP chart (dual axis)
+// ============================================================
+function renderDrFp() {
+  const trace1 = {
+    x: DATA.methods, y: DATA.dr, type: 'bar', name: 'Detection Rate (%)',
+    marker: { color: DATA.colors.map((c,i) => c + '99') },
+    yaxis: 'y'
+  };
+  const trace2 = {
+    x: DATA.methods, y: DATA.fp.map(v => v || 0.1), type: 'scatter', mode: 'markers+text',
+    name: 'False Positives', marker: { color: '#d32f2f', size: DATA.fp.map(v => Math.max(8, Math.log10(v+1)*6)), symbol: 'diamond' },
+    text: DATA.fp.map(v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'k' : v.toString()),
+    textposition: 'top center', textfont: { size: 10, color: '#d32f2f' },
+    yaxis: 'y2'
+  };
+  const layout = { ...plotLayout, yaxis: { title: 'Detection Rate (%)', range: [0, 105], gridcolor: plotGrid },
+    yaxis2: { title: 'False Positives', type: 'log', overlaying: 'y', side: 'right', range: [-0.5, 7.5], gridcolor: 'transparent' },
+    showlegend: true, legend: { x: 0.5, y: 1.15, orientation: 'h', xanchor: 'center' }, barmode: 'group' };
+  Plotly.newPlot('chart-dr-fp', [trace1, trace2], layout, { responsive: true, displayModeBar: false });
+}
+
+// ============================================================
+// Radar chart
+// ============================================================
+function renderRadar() {
+  const metrics = ['Detection Rate', 'Precision', 'Low FAR', 'Low Latency', 'Low FP', 'Low Net Load'];
+  const maxFAR = Math.max(...DATA.far.filter(v=>v>0));
+  const maxLat = Math.max(...DATA.lat.filter(v=>v>0));
+  const maxFP = Math.max(...DATA.fp.filter(v=>v>0));
+  const maxNet = Math.max(...DATA.net.filter(v=>v>0));
+  
+  const traces = DATA.methods.filter((_,i) => i !== 4).map((m, idx) => {
+    const i = DATA.methods.indexOf(m);
+    const vals = [
+      DATA.dr[i] / 100,
+      DATA.prec[i] / 100,
+      DATA.far[i] > 0 ? 1 - DATA.far[i]/maxFAR : 1,
+      DATA.lat[i] > 0 ? 1 - DATA.lat[i]/(maxLat*1.2) : 0,
+      DATA.fp[i] > 0 ? 1 - Math.log10(DATA.fp[i])/Math.log10(maxFP) : 1,
+      DATA.net[i] > 0 ? 1 - DATA.net[i]/maxNet : 1,
+    ].map(v => Math.max(0, v) * 100);
+    return {
+      type: 'scatterpolar', r: [...vals, vals[0]], theta: [...metrics, metrics[0]],
+      fill: i === 0 ? 'toself' : 'none', fillcolor: i === 0 ? 'rgba(46,125,50,0.1)' : undefined,
+      line: { color: DATA.colors[i], width: i === 0 ? 3 : 2, dash: i === 0 ? 'solid' : ['dash','dot','dashdot','dot'][idx-1] || 'dash' },
+      name: m
+    };
+  });
+  const layout = { ...plotLayout, polar: { radialaxis: { visible: true, range: [0, 105], gridcolor: plotGrid, linecolor: plotGrid },
+    angularaxis: { gridcolor: plotGrid, linecolor: plotGrid }, bgcolor: plotBg },
+    showlegend: true, legend: { x: 1, y: 0, font: { size: 10 } }, margin: { t: 30, b: 30, l: 60, r: 60 } };
+  Plotly.newPlot('chart-radar', traces, layout, { responsive: true, displayModeBar: false });
+}
+function updateRadar() { renderRadar(); }
+
+// ============================================================
+// FAR vs Precision bubble chart
+// ============================================================
+function renderFarPrec() {
+  const active = DATA.methods.filter((_,i) => DATA.far[i] > 0 || DATA.prec[i] > 0 || i === 0);
+  const traces = active.map(m => {
+    const i = DATA.methods.indexOf(m);
+    return {
+      x: [DATA.far[i] || 0.01], y: [DATA.prec[i]], mode: 'markers+text',
+      marker: { color: DATA.colors[i], size: Math.max(15, Math.log10(DATA.fp[i]+1)*8), opacity: 0.8, line: { width: 1, color: '#fff' } },
+      text: [m], textposition: 'top center', textfont: { size: 11 }, name: m, showlegend: false,
+    };
+  });
+  const layout = { ...plotLayout, xaxis: { title: 'False Alarm Rate (/hr/node)', type: 'log', gridcolor: plotGrid, range: [-2, 3.5] },
+    yaxis: { title: 'Precision (%)', range: [-5, 110], gridcolor: plotGrid },
+    annotations: [{ x: Math.log10(0.01), y: 100, text: 'TSNFA', showarrow: true, arrowhead: 2, ax: 40, ay: -30, font: { color: '#2e7d32', size: 12, weight: 700 } }]
+  };
+  Plotly.newPlot('chart-far-prec', traces, layout, { responsive: true, displayModeBar: false });
+}
+
+// ============================================================
+// Network load
+// ============================================================
+function renderNetwork() {
+  const trace = {
+    x: DATA.methods, y: DATA.net, type: 'bar',
+    marker: { color: DATA.colors },
+    text: DATA.net.map(v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(1)),
+    textposition: 'outside', textfont: { size: 10 }
+  };
+  const layout = { ...plotLayout, yaxis: { title: 'Network Load (kB/hr)', gridcolor: plotGrid }, showlegend: false };
+  Plotly.newPlot('chart-network', [trace], layout, { responsive: true, displayModeBar: false });
+}
+
+// ============================================================
+// Defence table
+// ============================================================
+function renderDefenceTable() {
+  const el = document.getElementById('defence-table-body');
+  el.innerHTML = DATA.methods.map((m, i) => {
+    const d = DATA.defences[i];
+    const cls = v => v === 'YES' ? 'yes' : v === 'NO' ? 'no' : 'partial';
+    return `<tr class="${i===0?'best':''}">
+      <td><span class="method-dot" style="background:${DATA.colors[i]}"></span>${m}</td>
+      <td class="${cls(d.band)}">${d.band}</td>
+      <td class="${cls(d.adaptive)}">${d.adaptive}</td>
+      <td class="${cls(d.persist)}">${d.persist}</td>
+      <td>${DATA.dr[i]}%</td>
+      <td>${DATA.fp[i].toLocaleString()}</td>
+      <td style="text-align:left;font-size:0.8rem;color:var(--muted)">${d.failure}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+// Noise model explorer
+// ============================================================
+function updateNoise() {
+  const drift = parseFloat(document.getElementById('noise-drift').value);
+  const emi = parseFloat(document.getElementById('emi-amp').value);
+  const dig = parseFloat(document.getElementById('dig-amp').value);
+  document.getElementById('noise-drift-val').textContent = `±${drift} dB`;
+  document.getElementById('emi-amp-val').textContent = `${emi.toFixed(2)}√P`;
+  document.getElementById('dig-amp-val').textContent = `${dig.toFixed(1)}√P`;
+  
+  const N = 500;
+  const t = Array.from({length: N}, (_, i) => i * 3600 / N);
+  const P = t.map(ti => Math.pow(10, (drift/10) * Math.sin(2 * Math.PI * ti / 3600)));
+  const thermal = P.map(p => Math.sqrt(p));
+  const emiLevel = P.map(p => emi * Math.sqrt(p));
+  const digLevel = P.map(p => dig * Math.sqrt(p) * (Math.random() > 0.7 ? 1 : 0.1));
+  const event = 7.94; // 18 dB SNR
+  const eventLevel = P.map(p => event * Math.sqrt(p));
+  
+  const traces = [
+    { x: t, y: eventLevel, name: 'Event (18 dB)', line: { color: '#2e7d32', width: 2 }, fill: 'tozeroy', fillcolor: 'rgba(46,125,50,0.1)' },
+    { x: t, y: thermal, name: 'Thermal noise √P', line: { color: '#1565c0', width: 1.5, dash: 'dot' } },
+    { x: t, y: emiLevel, name: `EMI (${emi.toFixed(2)}√P)`, line: { color: '#d32f2f', width: 1.5, dash: 'dash' } },
+    { x: t, y: digLevel, name: `Digital (${dig.toFixed(1)}√P)`, line: { color: '#e65100', width: 1 }, opacity: 0.6 },
+  ];
+  const layout = { ...plotLayout, xaxis: { title: 'Time within 1-hour cycle (s)', gridcolor: plotGrid },
+    yaxis: { title: 'Amplitude (×√P₀)', gridcolor: plotGrid },
+    showlegend: true, legend: { x: 0, y: 1.15, orientation: 'h' }, margin: { ...plotLayout.margin, t: 40 } };
+  Plotly.newPlot('chart-noise', traces, layout, { responsive: true, displayModeBar: false });
+}
+
+// ============================================================
+// Results table
+// ============================================================
+function renderResultsTable() {
+  const el = document.getElementById('results-table-body');
+  el.innerHTML = DATA.methods.map((m, i) => `
+    <tr class="${i===0?'best':''}">
+      <td><span class="method-dot" style="background:${DATA.colors[i]}"></span>${m}</td>
+      <td>${DATA.dr[i].toFixed(1)}%</td>
+      <td>${DATA.fp[i].toLocaleString()}</td>
+      <td>${DATA.fn[i].toLocaleString()}</td>
+      <td>${DATA.prec[i].toFixed(1)}%</td>
+      <td>${DATA.far[i].toFixed(1)}</td>
+      <td>${DATA.lat[i].toFixed(1)}</td>
+      <td>${DATA.lat99[i].toFixed(1)}</td>
+      <td>${DATA.net[i].toFixed(1)}</td>
+    </tr>
+  `).join('');
+}
+
+// ============================================================
+// Initialize
+// ============================================================
+renderSummary();
+renderDrFp();
+renderRadar();
+renderFarPrec();
+renderNetwork();
+renderDefenceTable();
+renderResultsTable();
+updateNoise();
+</script>
+</body>
+</html>
