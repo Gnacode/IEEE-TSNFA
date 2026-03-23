@@ -44,10 +44,10 @@ No installation required. Runs in any modern browser.
 ---
 ## Jupiter Notebook in CoLab
 
-Run the simulations in CoLab and see the performance of each algorithm against each other:
+Run a simulations in CoLab and see the performance of each algorithm against each other:
 
 **[Launch Jupiter Notebook in CoLab](https://colab.research.google.com/github/Gnacode/IEEE-TSNFA/blob/main/notebooks/TSNFA_Step_by_Step.ipynb)**
-
+The simulation matches the results found by the Monte Carlo simulation without implementing the full 24 hour simulation. It can be used to compare the different models performance to each other. The full simulation and the graphics routine are found here in the repository.
 
 ## Repository Structure
 
